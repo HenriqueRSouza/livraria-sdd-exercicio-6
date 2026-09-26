@@ -9,5 +9,5 @@ Marcar somente após verificar a tarefa. IDs de aceitação referem-se à especi
 - [x] T05 Implementar clientes, favoritos, recomendações e promoções; passar testes (C04,C07).
 - [x] T06 Implementar reserva, cancelamento, retirada, compra direta e pontos; passar testes (C05,C06).
 - [x] T07 Implementar alertas e reposição simulada; passar testes (C07).
-- [ ] T08 Construir rotas Flask e interface navegável; verificar fluxos HTTP (C08).
-- [ ] T09 Documentar execução e limitações, testar tudo e percorrer fluxos; verificar commits (C01–C08).
+- [x] T08 Construir rotas Flask e interface navegável; verificar fluxos HTTP (C08). Testes HTTP e servidor HTTP 200.
+- [x] T09 Documentar execução e limitações, testar tudo e percorrer fluxos; verificar commits (C01–C08). 10 testes passaram; servidor Flask respondeu HTTP 200.

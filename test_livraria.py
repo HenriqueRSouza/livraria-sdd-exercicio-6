@@ -102,6 +102,14 @@ class LivrariaTest(unittest.TestCase):
         self.assertEqual(sum(n["tipo"] == "reposicao" for n in self.loja.notificacoes(cliente)), 1)
         self.assertEqual(Livraria(self.db).estoque(2, 1)["quantidade"], 1)
 
+    def test_c03_inicializacao_repetida_preserva_dados(self):
+        cliente = self.cliente()
+        self.loja.reservar(cliente, 1, 1)
+        self.loja.init_db()
+        self.assertEqual(self.loja.estoque(1, 1)["quantidade"], 0)
+        self.assertEqual(len(self.loja.buscar_livros()), 2)
+        self.assertEqual(len(self.loja.historico(cliente)["reservas"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
