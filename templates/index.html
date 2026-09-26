@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Livraria — demonstração SDD</title>
+<style>
+body{font:1rem system-ui,sans-serif;max-width:950px;margin:auto;padding:1rem;color:#20252a;background:#f6f7f9}nav a{margin-right:1.4rem}header,article,section{background:white;border-radius:8px;padding:1rem;margin:1rem 0}input,button{padding:.45rem;margin:.2rem}button{cursor:pointer}label{display:inline-block}small{color:#555}.erro{color:#a22}.card{border-top:1px solid #ddd;padding:.6rem 0}h1,h2,h3{color:#234}form{display:inline-block}fieldset{border:1px solid #ddd;margin:.6rem 0}a{color:#12529b}
+</style>
+<header><h1>Livraria · SDD</h1><p><small>Catálogo, promoções, avaliações, compras e notificações de demonstração local. Sem pagamento, localização ou mensagens externas.</small></p>
+<nav><a href="{{ url_for('catalogo') }}">Catálogo</a><a href="{{ url_for('lojas') }}">Lojas</a><a href="{{ url_for('area') }}">{{ 'Minha área' if cliente_atual else 'Cadastro / entrada' }}</a>{% if cliente_atual %}<span>Olá, {{ cliente_atual.nome }}</span><form method="post" action="{{ url_for('sair') }}"><button>Sair</button></form>{% endif %}</nav></header>
+{% for categoria,mensagem in get_flashed_messages(with_categories=true) %}<p class="{{ categoria }}" role="status">{{ mensagem }}</p>{% endfor %}
+<main>
+{% if pagina == 'catalogo' %}
+<section><h2>Catálogo</h2><form method="get"><label>Título <input name="titulo" value="{{ request.args.get('titulo','') }}"></label><label>Autor <input name="autor" value="{{ request.args.get('autor','') }}"></label><label>Gênero <input name="genero" value="{{ request.args.get('genero','') }}"></label><button>Pesquisar</button></form>
+{% for b in livros %}<div class="card"><h3><a href="{{ url_for('livro',livro_id=b.id) }}">{{ b.titulo }}</a></h3><p>{{ b.autor }} · {{ b.genero }}</p></div>{% else %}<p>Nenhum livro encontrado.</p>{% endfor %}</section>
+{% elif pagina == 'livro' %}
+<article><h2>{{ livro.titulo }}</h2><p>{{ livro.autor }} · {{ livro.genero }}</p><p>{{ livro.sinopse }}</p>
+{% if cliente_atual %}<form method="post" action="{{ url_for('favorito',livro_id=livro.id,acao='adicionar') }}"><button>Salvar favorito</button></form>{% endif %}
+<h3>Avaliações de demonstração</h3>{% for a in livro.avaliacoes %}<p>{{ a.nota }}/5 — {{ a.texto }} ({{ a.autor }})</p>{% else %}<p>Ainda sem avaliações.</p>{% endfor %}
+<h3>Compare as edições e a disponibilidade</h3>
+{% for ed in livro.edicoes %}<fieldset><legend>{{ ed.nome }} ({{ ed.ano }})</legend><p>Preço: {{ ed.preco_centavos|reais }} · Valor atual: {{ ed.preco_final_centavos|reais }}</p>
+{% for promo in ed.promocoes %}<p>Promoção de demonstração: {{ promo.descricao }} (−{{ promo.desconto_centavos|reais }})</p>{% endfor %}
+{% for s in ed.estoques %}<div class="card"><strong>{{ s.loja_nome }}</strong> · Seção {{ s.secao }} · {{ s.quantidade }} disponível(is)
+{% if s.quantidade > 0 %}
+<form method="post" action="{{ url_for('reservar') }}"><input type="hidden" name="edicao_id" value="{{ ed.id }}"><input type="hidden" name="loja_id" value="{{ s.loja_id }}"><button>Reservar para retirada</button></form>
+<form method="post" action="{{ url_for('comprar') }}"><input type="hidden" name="edicao_id" value="{{ ed.id }}"><input type="hidden" name="loja_id" value="{{ s.loja_id }}"><button>Compra presencial simulada</button></form>
+{% else %}<form method="post" action="{{ url_for('alertar') }}"><input type="hidden" name="edicao_id" value="{{ ed.id }}"><input type="hidden" name="loja_id" value="{{ s.loja_id }}"><button>Avisar reposição (local)</button></form>{% endif %}
+<form method="post" action="{{ url_for('repor') }}"><input type="hidden" name="edicao_id" value="{{ ed.id }}"><input type="hidden" name="loja_id" value="{{ s.loja_id }}"><button>Simular +1 no estoque</button></form></div>{% endfor %}</fieldset>{% endfor %}</article>
+{% elif pagina == 'lojas' %}
+<section><h2>Encontrar lojas por bairro (sem GPS)</h2><form method="get"><label>Bairro <input name="bairro" value="{{ request.args.get('bairro','') }}"></label><button>Filtrar</button></form>
+{% for l in lojas %}<div class="card"><h3>{{ l.nome }} · {{ l.bairro }}</h3><p>{{ l.endereco }} · {{ l.horario }}</p><p>Pagamentos simulados: {{ l.pagamentos }} · Serviços: {{ l.servicos }} · Café: {{ 'Sim' if l.cafe else 'Não' }}</p><p>Eventos de demonstração: {{ l.eventos }}</p></div>{% else %}<p>Nenhuma unidade encontrada.</p>{% endfor %}</section>
+{% elif pagina == 'entrada' %}
+<section><h2>Cadastro simples de demonstração</h2><p>Sem senha ou autenticação de produção.</p><form method="post" action="{{ url_for('cadastro') }}"><label>Nome <input name="nome" required></label><label>Email <input name="email" type="email" required></label><label>Bairro <input name="bairro" required></label><label>Interesses (gêneros separados por vírgula) <input name="interesses"></label><button>Cadastrar</button></form>
+<h3>Já cadastrou?</h3><form method="post" action="{{ url_for('entrar') }}"><label>Email <input name="email" type="email" required></label><button>Entrar</button></form></section>
+{% elif pagina == 'cliente' %}
+<section><h2>Minha área · {{ cliente_atual.nome }}</h2><p>{{ cliente_atual.email }} · {{ cliente_atual.bairro }} · Interesses: {{ cliente_atual.interesses or 'nenhum' }}</p><p>Fidelidade: <strong>{{ historico.pontos }} pontos</strong> (somente compras concluídas)</p>
+<h3>Reservas e códigos para retirada</h3>{% for r in historico.reservas %}<div class="card">{{ r.codigo }} · {{ r.titulo }} / {{ r.edicao }} · {{ r.loja }} · Seção {{ r.secao }} · {{ r.preco_centavos|reais }} · {{ r.estado }}
+{% if r.estado == 'confirmada' %}<form method="post" action="{{ url_for('reserva_acao',codigo=r.codigo,acao='retirar') }}"><button>Agilizar compra: retirar com código</button></form><form method="post" action="{{ url_for('reserva_acao',codigo=r.codigo,acao='cancelar') }}"><button>Cancelar reserva</button></form>{% endif %}</div>{% else %}<p>Sem reservas.</p>{% endfor %}
+<h3>Histórico de compras (pagamento simulado)</h3>{% for c in historico.compras %}<p>#{{ c.id }} · {{ c.titulo }} / {{ c.edicao }} · {{ c.loja }} · {{ c.preco_centavos|reais }}</p>{% else %}<p>Sem compras.</p>{% endfor %}
+<h3>Favoritos</h3>{% for b in favoritos %}<p><a href="{{ url_for('livro',livro_id=b.id) }}">{{ b.titulo }}</a> <form method="post" action="{{ url_for('favorito',livro_id=b.id,acao='remover') }}"><button>Remover favorito</button></form></p>{% else %}<p>Nenhum favorito.</p>{% endfor %}
+<h3>Recomendações locais por interesse</h3>{% for b in recomendacoes %}<p><a href="{{ url_for('livro',livro_id=b.id) }}">{{ b.titulo }}</a></p>{% else %}<p>Sem recomendações no catálogo de demonstração.</p>{% endfor %}
+<h3>Notificações locais</h3>{% for n in notificacoes %}<p>{{ n.tipo }}: {{ n.mensagem }}</p>{% else %}<p>Nenhuma notificação.</p>{% endfor %}</section>
+{% endif %}
+</main></html>
